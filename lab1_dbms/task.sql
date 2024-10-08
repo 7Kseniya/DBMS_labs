@@ -14,8 +14,12 @@ DECLARE
     constraint_res text;
     number_of_failed_attempts int = 0;
     number_of_scheme int = 0;
-    p_table_name text := 'Н_ХАРАКТЕРИСТИКИ_ВИДОВ_РАБОТ'; /*имя таблицы*/
-    p_user_name text := 's368231'; /*имя пользователя*/
+    p_table_name text := '${p_table_name}'; /*имя таблицы*/
+    p_schema_name text := '${p_schema_name}';/*название схемы*/
+    p_user_name text := '${p_user_name}'; /*имя пользователя*/
+    p_user_surname text := '${p_user_surname}';
+    p_name text := '${p_name}';
+
 BEGIN
     /*цикл по схемам, к которым у пользователя есть права доступа */
     FOR v_schema_name IN
@@ -38,7 +42,8 @@ BEGIN
                 WHERE relnamespace = v_schema_name.oid
                 AND relkind = 'r' AND relname = p_table_name
             LOOP
-                RAISE NOTICE 'Пользователь: % (%)', p_user_name, v_schema_name.nspname;
+            -- v_schema_name.nspname
+                RAISE NOTICE 'Пользователь: % % (%)', p_name, p_user_surname, p_user_name;
                 RAISE NOTICE 'Таблица: %', v_table_name.relname;
                 RAISE NOTICE 'No. Имя столбца   Атрибуты';
                 RAISE NOTICE '--- ------------------   ------------------------------------------------------';
