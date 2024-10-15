@@ -83,50 +83,57 @@ BEGIN
                         RAISE NOTICE '%', result;
 
                     END IF;
-                    /*проверка ограничений по внешним ключам*/
+
+                    /* Вывод информации о первичных ключах */
                     FOR v_constraint IN (
-                        /*имя, идентификатор таблицы с этим ограничением, идентификатор таблицы, на которую ссылается огр (для внешних ключей), массив номеров столбцов для применения огр, массив на которые ссылаются*/
-                        SELECT c.conname, c.conrelid, c.confrelid, a.attname, conf.relname as conf_table, a2.attname as conf_column
-                        FROM pg_constraint c /*инфа об ограничениях*/
+                        SELECT c.conname, a.attname
+                        FROM pg_constraint c
+                        JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
+                        WHERE c.contype = 'p' AND a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
+                    )
+                    LOOP
+                        SELECT FORMAT('Constr: %s Primary Key %s(%s)', v_constraint.conname, p_table_name, v_constraint.attname) INTO constraint_res;
+                        RAISE NOTICE '%', constraint_res;
+                    END LOOP;
+
+                    /* Вывод информации о уникальных ограничениях */
+                    FOR v_constraint IN (
+                        SELECT c.conname, a.attname
+                        FROM pg_constraint c
+                        JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
+                        WHERE c.contype = 'u' AND a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
+                    )
+                    LOOP
+                        SELECT FORMAT('Constr: "%s" Unique %s(%s)', v_constraint.conname, p_table_name, v_constraint.attname) INTO constraint_res;
+                        RAISE NOTICE '%', constraint_res;
+                    END LOOP;
+
+                    /* Вывод информации о внешних ключах */
+                    FOR v_constraint IN (
+                        SELECT c.conname, a.attname, conf.relname as conf_table, a2.attname as conf_column
+                        FROM pg_constraint c
                         JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
                         JOIN pg_class conf ON conf.oid = c.confrelid
                         JOIN pg_attribute a2 ON a2.attnum = ANY(c.confkey) AND a2.attrelid = c.confrelid
-                        WHERE a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
+                        WHERE c.contype = 'f' AND a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
                     )
                     LOOP
-                        SELECT FORMAT('Constr : %s References %s(%s)', v_constraint.conname, v_constraint.conf_table, v_constraint.conf_column) INTO constraint_res;
+                        SELECT FORMAT('Constr: %s Foreign Key %s(%s)', v_constraint.conname, p_table_name, v_constraint.attname, v_constraint.conf_table, v_constraint.conf_column) INTO constraint_res;
                         RAISE NOTICE '%', constraint_res;
                     END LOOP;
-                    /*проверка целостности данных внутри таблицы*/
+
+                    /* Вывод информации о проверках */
                     FOR v_constraint IN (
-                        SELECT c.conname, c.conrelid, c.confrelid, a.attname, c.conrelid, c.confkey, c.contype, pg_get_constraintdef(c.oid) as check_condition
+                        SELECT c.conname, pg_get_constraintdef(c.oid) as check_condition
                         FROM pg_constraint c
                         JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
-                        WHERE a.attrelid = v_table_name.oid AND c.contype = 'c'AND a.attname = v_attname.attname
+                        WHERE c.contype = 'c' AND a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
                     )
                     LOOP
-                        SELECT FORMAT('Constr : %s %s', v_constraint.conname, v_constraint.check_condition) INTO constraint_res;
+                        SELECT FORMAT(' Constr : %s Check %s(%s)', v_constraint.conname, p_table_name, v_constraint.check_condition) INTO constraint_res;
                         RAISE NOTICE '%', constraint_res;
                     END LOOP;
-                    /*
-                    хз как проверить корректность, поэтому пусть пока будет 2 проверки ограничений
-                    FOR v_constraint IN (
-                        SELECT c.conname, c.conrelid, c.confrelid, a.attname, conf.relname as conf_table, a2.attname as conf_column, c.contype, pg_get_constraintdef(c.oid) as check_condition
-                        FROM pg_constraint c
-                        JOIN pg_attribute a ON a.attnum = ANY(c.conkey) AND a.attrelid = c.conrelid
-                        LEFT JOIN pg_class conf ON conf.oid = c.confrelid
-                        LEFT JOIN pg_attribute a2 ON a2.attnum = ANY(c.confkey) AND a2.attrelid = c.confrelid
-                        WHERE a.attrelid = v_table_name.oid AND a.attname = v_attname.attname
-                    )
-                    LOOP
-                        IF v_constraint.contype = 'f' THEN
-                            constraint_res := FORMAT('Constr : %s References %s(%s)', v_constraint.conname, v_constraint.conf_table, v_constraint.conf_column);
-                        ELSIF v_constraint.contype = 'c' THEN
-                            constraint_res := FORMAT('Constr : %s %s', v_constraint.conname, v_constraint.check_condition);
-                        END IF;
-                        RAISE NOTICE '%', constraint_res;
-                    END LOOP;
-                    */
+
                 END LOOP;
             END LOOP;
     END IF;
