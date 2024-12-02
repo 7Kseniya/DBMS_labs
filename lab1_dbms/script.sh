@@ -11,7 +11,7 @@ p_schema_name="${table_parts[-2]}"
 p_database_name="${table_parts[-3]}"
 
 # charset deserialization
-p_table_name=$(echo "$p_table_name" | tr '[:lower:]' '[:upper:]' | iconv -f $(locale charmap) -t UTF-8)
+p_table_name=$(echo "$p_table_name" | iconv -f $(locale charmap) -t UTF-8)
 p_schema_name=$(echo "$p_schema_name" | iconv -f $(locale charmap) -t UTF-8)
 p_database_name=$(echo "$p_database_name" | iconv -f $(locale charmap) -t UTF-8)
 p_user_name=$(echo "$p_user_name" | iconv -f $(locale charmap) -t UTF-8)
