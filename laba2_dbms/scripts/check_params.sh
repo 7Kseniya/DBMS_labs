@@ -13,7 +13,7 @@ grep "commit_delay" $HOME/ckf15/postgresql.conf
 # WAL file params checking 
 grep "log_directory" $HOME/ckf15/postgresql.conf
 grep "log_filename" $HOME/ckf15/postgresql.conf
-grep "wal_level" $HOME/ckf15/postgresql.confss
+grep "wal_level" $HOME/ckf15/postgresql.conf
 
 # log params checking
 grep "log_statement" $HOME/ckf15/postgresql.conf
@@ -22,3 +22,5 @@ grep "log_connections" $HOME/ckf15/postgresql.conf
 grep "log_disconnections" $HOME/ckf15/postgresql.conf
 grep "log_destination" $HOME/ckf15/postgresql.conf
 grep "logging_collector" $HOME/ckf15/postgresql.conf
+
+pg_isready -h localhost -p 9392
