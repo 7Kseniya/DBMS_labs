@@ -12,16 +12,18 @@ echo "инициализация кластера в $HOME/ckf15..."
 mkdir -p $HOME/ckf15
 # устанавливаем владельца каталога 
 chown postgres0 $HOME/ckf15
-initdb -D $HOME/ckf15 -E UTF8 --locale=en_US.UTF-8 || echo "Ошибка инициализации";
+# создание директории для WAL файлов 
+echo "создание директории $HOME/roi68 для WAL файлов"
+mkdir -p $HOME/roi68 
+# устанавливаем владельца каталога 
+chown postgres0 $HOME/roi68
+
+initdb -D $HOME/ckf15 -E UTF8 --locale=en_US.UTF-8 --waldir=$HOME/roi68 || echo "Ошибка инициализации" ;
 
 # === Запуск сервера ===
 # pg_ctl -D /var/db/postgres0/ckf15 -l файл_журнала start
 echo "запуск сервера postgres..."
 pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/postgres.log start
 
-# создание директории для WAL файлов 
-echo "создание директории $HOME/roi68 для WAL файлов"
-mkdir -p $HOME/roi68 
-# устанавливаем владельца каталога 
-chown postgres0 $HOME/roi68
+
 
