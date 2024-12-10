@@ -15,23 +15,28 @@ psql -p 9392 -d postgres -c "GRANT CONNECT ON DATABASE evilyellowsong TO evilyel
 psql -p 9392 -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE evilyellowsong TO evilyellowrole;"
 
 echo "наполнение базы 'evilyellowsong' тестовыми данными..."
-psql -p 9392 -d postgres -U evilyellowrole -d evilyellowsong -c "
-CREATE TABLE IF NOT EXISTS test_table (
+psql -h pg180 -p 9392 -d evilyellowsong -U evilyellowrole -c "
+CREATE SCHEMA IF NOT EXISTS test_schema;
+CREATE TABLE IF NOT EXISTS test_schema.test_table (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50),
     value INTEGER
 );
-INSERT INTO test_table (name, value) VALUES
+INSERT INTO test_schema.test_table (name, value) VALUES
 ('test1', 1),
 ('test2', 2),
 ('test3', 3);
 " || echo "Ошибка наполения базы";
 
 echo "список табличных пространств и объектов: "
-psql -p 9392 -d postgres -c "\db+"
-psql -p 9392 -d postgres -d evilyellowsong -c "\dt+"
+psql -p 9392 -d evilyellowsong -c "\db+"
+psql -h pg180 -p 9392 -d evilyellowsong -U evilyellowrole -c "\dt+ test_schema.*"
 
-psql -h pg180 -p 9392 -d postgres -U evilyellowrole 
+psql -h pg180 -p 9392 -d evilyellowsong -U evilyellowrole
 
 # завершение работы 
-echo "сервер настроен и готов к работе ура бл"
+if [ $? -eq 0 ]; then
+    echo "сервер настроен и готов к работе ура бл"
+else
+    echo "Ошибка подключения к базе данных"
+fi

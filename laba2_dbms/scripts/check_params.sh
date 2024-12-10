@@ -1,6 +1,8 @@
 # check OLTP scenario params 
-echo "checking postgres.log params"
+echo "checking postgresql.conf params"
 
+grep "listen_addresses" $HOME/ckf15/postgresql.conf
+grep "port" $HOME/ckf15/postgresql.conf
 grep "max_connections" $HOME/ckf15/postgresql.conf
 grep "shared_buffers" $HOME/ckf15/postgresql.conf
 grep "temp_buffers" $HOME/ckf15/postgresql.conf
