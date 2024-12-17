@@ -35,6 +35,7 @@ psql -h pg180 -p 9392 -d evilyellowsong -U evilyellowrole -c "\dt+ test_schema.*
 psql -h pg180 -p 9392 -d evilyellowsong -U evilyellowrole
 
 # завершение работы 
+# $ - код возврата последней выполенной команды 
 if [ $? -eq 0 ]; then
     echo "сервер настроен и готов к работе ура бл"
 else
