@@ -17,14 +17,14 @@ grep "listen_addresses" $HOME/ckf15/postgresql.conf
 grep "port" $HOME/ckf15/postgresql.conf
 
 # настройка параметров со сценарием OLTP
-sed -i '' "s/#max_connections = 100/max_connections = 500/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#shared_buffers = 128MB/shared_buffers = 2GB/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#temp_buffers = 8MB/temp_buffers = 32MB/" $HOME/ckf15/postgresql.conf
+# sed -i '' "s/#max_connections = 100/max_connections = 100/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#shared_buffers = 128MB/shared_buffers = 4GB/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#temp_buffers = 8MB/temp_buffers = 16MB/" $HOME/ckf15/postgresql.conf
 sed -i '' "s/#work_mem = 4MB/work_mem = 16MB/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#checkpoint_timeout = 5min/checkpoint_timeout = 1min/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#effective_cache_size = 4GB/effective_cache_size = 6GB/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#checkpoint_timeout = 5min/checkpoint_timeout = 5min/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#effective_cache_size = 4GB/effective_cache_size = 12GB/" $HOME/ckf15/postgresql.conf
 sed -i '' "s/#fsync = on/fsync = on/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#commit_delay = 0/commit_delay = 1000/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#commit_delay = 0/commit_delay = 0/" $HOME/ckf15/postgresql.conf
 
 # Логирование
 sed -i '' "s/#log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'/log_filename = 'postgresql-%a.csv'/" $HOME/ckf15/postgresql.conf
@@ -37,12 +37,9 @@ sed -i '' "s/#logging_collector = off/logging_collector = on/" $HOME/ckf15/postg
 
 echo "параметры успешно обновлены"
 
-grep "listen_addresses" $HOME/ckf15/postgresql.conf 
-grep "port" $HOME/ckf15/postgresql.conf
-
-# установка владельца для файлов 
-chown postgres0 $HOME/ckf15/postgresql.conf
-chown postgres0 $HOME/ckf15/pg_hba.conf 
+echo "Установка владельца для конфигов..."
+chown postgres0 $HOME/ckf15/postgresql.conf || echo "Не удалось изменить владельца postgresql.conf"
+chown postgres0 $HOME/ckf15/pg_hba.conf || echo "Не удалось изменить владельца pg_hba.conf"
 
 # проверка конфигов 
 ls -l $HOME/ckf15/postgresql.conf

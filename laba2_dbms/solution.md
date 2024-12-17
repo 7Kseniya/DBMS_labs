@@ -12,23 +12,29 @@ ssh -J s368231@helios.cs.ifmo.ru:2222 postgres0@pg180
     Локаль: английская
     Параметры инициализации задать через аргументы команды
     
-#### создаем директорию кластера и инициализируем базу данных 
+#### создаем директорию кластера
 ```bash
-mkdir -p $HOME/ckf15
-chown postgres0 $HOME/ckf15
-initdb -D $HOME/ckf15 -E UTF8 --locale=en_US.UTF-8 || echo "Ошибка инициализации";
+mkdir -p $HOME/ckf15 || echo "Ошибка: не удалось создать каталог $HOME/ckf15";
+# устанавливаем владельца каталога 
+chown postgres0 $HOME/ckf15 
 ```
-
 #### создаем директорию для WAL файлов
+- Директория WAL файлов: `$HOME/roi68`
+
 ```bash
-mkdir -p $HOME/roi68 
+mkdir -p $HOME/roi68 || echo "Ошибка: не удалось создать каталог $HOME/roi68";
+# устанавливаем владельца каталога 
 chown postgres0 $HOME/roi68
 ```
-
-#### запускаем сервер
-```bash
-pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/server.log start
+#### инициализация сервера 
+```bash 
+initdb -D $HOME/ckf15 -E UTF8 --locale=en_US.UTF-8 --waldir=$HOME/roi68 || echo "Ошибка инициализации" ;
 ```
+#### запуск сервера
+```bash
+pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/postgres.log start
+```
+---
 
 ## Этап 2. Конфигурация и запуск сервера БД
 
@@ -42,13 +48,20 @@ pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/server.log start
 #### настройка параметров со сценарием OLTP
 с 500 транзакциями в секунду (TPS), размером транзакций 32КБ, и требованием высокой доступности данных
 
+**OLTP (Online Transaction Processing)** — это тип системы, предназначенной для обработки транзакций в реальном времени. 
+Основные характеристики OLTP-систем:
+
+**Реальное время:** OLTP-системы обрабатывают транзакции в реальном времени, обеспечивая мгновенное обновление данных.
+**Высокая производительность:** Эти системы оптимизированы для выполнения большого количества транзакций в единицу времени.
+**Надежность:** OLTP-системы должны быть высоконадежными, так как ошибки в обработке транзакций могут привести к серьезным последствиям.
+**Целостность данных:** Важно обеспечить целостность данных, чтобы транзакции были завершены корректно и без потерь.
+**Масштабируемость:** OLTP-системы должны быть способны масштабироваться для обработки увеличивающегося объема транзакций.
+
 ---
 
 **1. `max_connections`**
 - **Описание:** Максимальное количество подключений к базе данных.
 - **Значение:** `100`
-
----
 
 **2. `shared_buffers`**
 - **Описание:** Размер памяти, выделенной для буферов PostgreSQL
@@ -57,41 +70,29 @@ pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/server.log start
   если сервер имеет 16 ГБ ОЗУ:  
   **`shared_buffers = 4GB`**
 
----
-
 **3. `temp_buffers`**
 - **Описание:** Буферы для временных таблиц, которые используются внутри транзакций
 - Учитывая небольшой размер транзакций и высокую частоту, не стоит устанавливать большое значение.  
 - **Значение:** `16MB`
 
----
-
 **4. `work_mem`**
 - **Описание:** Память для выполнения операций сортировки и хеширования. Настраивается для каждой сессии.
-- **Значение:** `4MB`  
-
----
+- **Значение:** `16MB`  
 
 **5. `checkpoint_timeout`**
 - **Описание:** Интервал времени между контрольными точками
 - OLTP требует минимальных задержек, а частые контрольные точки обеспечивают меньшую потерю данных в случае сбоя. Однако слишком короткие интервалы увеличивают нагрузку на дисковую подсистему.  
 - **Значение:** `5 minutes`
 
----
-
 **6. `effective_cache_size`**
 - **Описание:** Размер файловой системы, который PostgreSQL предполагает доступным для кэширования
 - Устанавливается примерно как 50–75% от общей оперативной памяти. Это значение влияет на планировщик запросов.  
 - **Значение:** `12GB` (для сервера с 16 ГБ RAM).
 
----
-
 **7. `fsync`**
 - **Описание:** Контролирует, записывает ли PostgreSQL изменения на диск при каждой транзакции
 - Для обеспечения высокой доступности данных этот параметр **должен быть включён**
 - **Значение:** `on`
-
----
 
 **8. `commit_delay`**
 - **Описание:** Задержка перед записью транзакции в WAL
@@ -112,18 +113,17 @@ fsync = on
 commit_delay = 0
 ```
 
+---
 ```bash
 # === Этап 2: Конфигурация сервера БД ===
-ls -l $HOME/ckf15/postgresql.conf
-ls -l $HOME/ckf15/pg_hba.conf
 
+echo "добавление изменений в конфигурацию..."
 # Для локальных подключений по паролю
 sed -i '' 's/^local[[:space:]]*all[[:space:]]*all[[:space:]]*trust$/local   all             all                                     peer/' $HOME/ckf15/pg_hba.conf
-grep "^local" $HOME/ckf15/pg_hba.conf
-
-# разрешаем для любого айпишника
 sed -i '' 's|^host[[:space:]]*all[[:space:]]*all[[:space:]]*127.0.0.1/32[[:space:]]*trust$|host    all             all             0.0.0.0/0               password|' $HOME/ckf15/pg_hba.conf
 sed -i '' 's|^host[[:space:]]*all[[:space:]]*all[[:space:]]*::1/128[[:space:]]*trust$|host    all             all             ::/0                    password|' $HOME/ckf15/pg_hba.conf
+# проверка внесенных изменений 
+grep "^local" $HOME/ckf15/pg_hba.conf
 grep "^host" $HOME/ckf15/pg_hba.conf
 
 # addresses and port
@@ -134,14 +134,14 @@ grep "listen_addresses" $HOME/ckf15/postgresql.conf
 grep "port" $HOME/ckf15/postgresql.conf
 
 # настройка параметров со сценарием OLTP
-sed -i '' "s/#max_connections = 100/max_connections = 500/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#shared_buffers = 128MB/shared_buffers = 2GB/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#temp_buffers = 8MB/temp_buffers = 32MB/" $HOME/ckf15/postgresql.conf
+# sed -i '' "s/#max_connections = 100/max_connections = 100/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#shared_buffers = 128MB/shared_buffers = 4GB/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#temp_buffers = 8MB/temp_buffers = 16MB/" $HOME/ckf15/postgresql.conf
 sed -i '' "s/#work_mem = 4MB/work_mem = 16MB/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#checkpoint_timeout = 5min/checkpoint_timeout = 1min/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#effective_cache_size = 4GB/effective_cache_size = 6GB/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#checkpoint_timeout = 5min/checkpoint_timeout = 5min/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#effective_cache_size = 4GB/effective_cache_size = 12GB/" $HOME/ckf15/postgresql.conf
 sed -i '' "s/#fsync = on/fsync = on/" $HOME/ckf15/postgresql.conf
-sed -i '' "s/#commit_delay = 0/commit_delay = 1000/" $HOME/ckf15/postgresql.conf
+sed -i '' "s/#commit_delay = 0/commit_delay = 0/" $HOME/ckf15/postgresql.conf
 
 # Логирование
 sed -i '' "s/#log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'/log_filename = 'postgresql-%a.csv'/" $HOME/ckf15/postgresql.conf
@@ -152,9 +152,19 @@ sed -i '' "s/#log_disconnections = off/log_disconnections = on/" $HOME/ckf15/pos
 sed -i '' "s/#log_destination = 'stderr'/log_destination = 'csvlog'/" $HOME/ckf15/postgresql.conf
 sed -i '' "s/#logging_collector = off/logging_collector = on/" $HOME/ckf15/postgresql.conf
 
+echo "параметры успешно обновлены"
+
+echo "Установка владельца для конфигов..."
+chown postgres0 $HOME/ckf15/postgresql.conf || echo "Не удалось изменить владельца postgresql.conf"
+chown postgres0 $HOME/ckf15/pg_hba.conf || echo "Не удалось изменить владельца pg_hba.conf"
+
+# проверка конфигов 
+ls -l $HOME/ckf15/postgresql.conf
+ls -l $HOME/ckf15/pg_hba.conf
+
 # перезапуск
 echo "перезапуск сервера для применения изменений..."
-pg_ctl -D $HOME/ckf15 -l $HOME/ckf15/postgres.log restart || echo "Ошибка перезапуска сервера";
+pg_ctl -D $HOME/ckf15 restart || echo "Ошибка перезапуска сервера";
 ```
 
 ## Этап 3. Дополнительные табличные пространства и наполнение базы
@@ -208,6 +218,10 @@ fi
 
 #### запросы 
 
+```sql
+SELECT * FROM pg_catalog.pg_tables WHERE tableowner = 'evilyellowrole';
+```
+
 выводит все объекты в табличных пространствах
 ```sql
 SELECT
@@ -239,5 +253,13 @@ GROUP BY
 ORDER BY 
     t.spcname;
 ```
-sed снести 
-подложить конфиг
+
+объекты, созданные новым пользователем
+```sql
+SELECT
+    relname, spcname AS tablespace
+FROM
+    pg_class LEFT JOIN pg_tablespace ON pg_tablespace.oid = reltablespace
+WHERE
+    relowner = (SELECT oid FROM pg_roles WHERE rolname = 'evilyellowrole');
+```

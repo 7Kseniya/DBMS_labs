@@ -9,12 +9,12 @@
 # === Этап 1: Инициализация кластера БД ===
 # создание директории для кластера и инициализация 
 echo "инициализация кластера в $HOME/ckf15..."
-mkdir -p $HOME/ckf15
+mkdir -p $HOME/ckf15 || echo "Ошибка: не удалось создать каталог $HOME/ckf15";
 # устанавливаем владельца каталога 
-chown postgres0 $HOME/ckf15
+chown postgres0 $HOME/ckf15 
 # создание директории для WAL файлов 
 echo "создание директории $HOME/roi68 для WAL файлов"
-mkdir -p $HOME/roi68 
+mkdir -p $HOME/roi68 || echo "Ошибка: не удалось создать каталог $HOME/roi68";
 # устанавливаем владельца каталога 
 chown postgres0 $HOME/roi68
 
